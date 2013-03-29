@@ -57,18 +57,14 @@ import org.apache.wicket.request.resource.ResourceReference;
 
 /**
  * Jmx panel, to view and operate the applications mbeans
- * 
+ *
  * @author Pedro Henrique Oliveira dos Santos
- * 
  */
 public class MBeansPanel extends Panel
 {
-	private static final long serialVersionUID = 1L;
-
 	public static final String VIEW_PANEL_ID = "view";
-
-	private static final ResourceReference CSS = new PackageResourceReference(MBeansPanel.class,
-		"css/MBeansPanel.css");
+	private static final long serialVersionUID = 1L;
+	private static final ResourceReference CSS = new PackageResourceReference(MBeansPanel.class, "css/MBeansPanel.css");
 
 	public MBeansPanel(String id)
 	{
@@ -87,11 +83,92 @@ public class MBeansPanel extends Panel
 			MBeanTree mBeansTree = new MBeanTree("mBeansTree", getTreeModel(reachMbeanServer));
 			add(mBeansTree);
 			add(new EmptyPanel(VIEW_PANEL_ID).setOutputMarkupId(true));
-		}
-		catch (Exception e)
+		} catch (Exception e)
 		{
 			e.printStackTrace();
 		}
+	}
+
+	private TreeModel getTreeModel(MbeanServerLocator reachMbeanServer)
+			throws MalformedObjectNameException, NullPointerException, InstanceNotFoundException,
+			IntrospectionException, ReflectionException
+	{
+		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("root");
+		TreeModel model = new DefaultTreeModel(rootNode);
+		String[] domains = reachMbeanServer.get().getDomains();
+		for (String domain : domains)
+		{
+			MbeanNode domainNode = new MbeanNode(domain);
+			rootNode.add(domainNode);
+			// expand the domain by querying its names
+			Set<ObjectName> domainNames = reachMbeanServer.get().queryNames(null,
+					new ObjectName(domain + ":*"));
+			addDomainsCildrens(domainNode, DataUtil.parseToPropsSet(domainNames));
+			// iterating domain names and to set their related objects instance
+			Enumeration<DefaultMutableTreeNode> enumeration = domainNode.postorderEnumeration();
+			while (enumeration.hasMoreElements())
+			{
+				DefaultMutableTreeNode node = enumeration.nextElement();
+				StringBuilder query = new StringBuilder(domain).append(':');
+				TreeNode[] path = node.getPath();
+				if (path.length > 2)
+				{
+					for (int j = 2; j < path.length; j++)
+					{
+						if (path[j] instanceof MbeanNode)
+						{
+							query.append(((MbeanNode)path[j]).getKeyValue());
+						}
+						if (j < path.length - 1)
+						{
+							query.append(',');
+						}
+					}
+					Set<ObjectInstance> mBeans = reachMbeanServer.get().queryMBeans(null,
+							new ObjectName(query.toString()));
+					for (ObjectInstance objectInstance : mBeans)
+					{
+						((MbeanNode)node).setObjectInstance(objectInstance, reachMbeanServer);
+					}
+				}
+			}
+		}
+		return model;
+	}
+
+	/**
+	 * @param rootNode
+	 * @param domainNames
+	 */
+	private void addDomainsCildrens(DefaultMutableTreeNode rootNode, Set<Set<String>> domainNames)
+	{
+		Map<String, Set<Set<String>>> parentProps = new HashMap<String, Set<Set<String>>>();
+		for (Set<String> names : domainNames)
+		{
+			List<String> namesList = new ArrayList<String>(names);
+			Collections.sort(namesList, new MBeansTreeNameComparator());
+			if (namesList.size() > 0)
+			{
+				if (parentProps.get(namesList.get(0)) == null)
+				{
+					parentProps.put(namesList.get(0), new HashSet<Set<String>>());
+				}
+				names.remove(namesList.get(0));
+				parentProps.get(namesList.get(0)).add(names);
+			}
+		}
+		for (Map.Entry<String, Set<Set<String>>> entry : parentProps.entrySet())
+		{
+			MbeanNode newNode = new MbeanNode(null, entry.getKey());
+			rootNode.add(newNode);
+			addDomainsCildrens(newNode, entry.getValue());
+		}
+	}
+
+	@Override
+	public void renderHead(IHeaderResponse res)
+	{
+		res.render(CssHeaderItem.forReference(CSS));
 	}
 
 	private class MBeanTree extends Tree
@@ -129,92 +206,13 @@ public class MBeansPanel extends Panel
 			{
 				DefaultMutableTreeNode mutableNode = (DefaultMutableTreeNode)node;
 				if (mutableNode.getChildCount() > 0 &&
-					(mutableNode.getChildAt(0) instanceof AttributeNode ||
-						mutableNode.getChildAt(0) instanceof OperationNode || mutableNode.getChildAt(0) instanceof NotificationNode))
+						(mutableNode.getChildAt(0) instanceof AttributeNode ||
+								mutableNode.getChildAt(0) instanceof OperationNode || mutableNode.getChildAt(0) instanceof NotificationNode))
 				{
 					return new EmptyPanel(id).add(AttributeModifier.replace("style", "width:0;"));
 				}
 			}
 			return super.newNodeIcon(parent, id, node);
-		}
-	}
-
-	private TreeModel getTreeModel(MbeanServerLocator reachMbeanServer)
-		throws MalformedObjectNameException, NullPointerException, InstanceNotFoundException,
-		IntrospectionException, ReflectionException
-	{
-		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("root");
-		TreeModel model = new DefaultTreeModel(rootNode);
-		String[] domains = reachMbeanServer.get().getDomains();
-		for (String domain : domains)
-		{
-			MbeanNode domainNode = new MbeanNode(domain);
-			rootNode.add(domainNode);
-
-			// expand the domain by querying its names
-			Set<ObjectName> domainNames = reachMbeanServer.get().queryNames(null,
-				new ObjectName(domain + ":*"));
-			addDomainsCildrens(domainNode, DataUtil.parseToPropsSet(domainNames));
-
-			// iterating domain names and to set their related objects instance
-			Enumeration<DefaultMutableTreeNode> enumeration = domainNode.postorderEnumeration();
-			while (enumeration.hasMoreElements())
-			{
-				DefaultMutableTreeNode node = enumeration.nextElement();
-				StringBuilder query = new StringBuilder(domain).append(':');
-				TreeNode[] path = node.getPath();
-				if (path.length > 2)
-				{
-					for (int j = 2; j < path.length; j++)
-					{
-						if (path[j] instanceof MbeanNode)
-						{
-							query.append(((MbeanNode)path[j]).getKeyValue());
-						}
-						if (j < path.length - 1)
-						{
-							query.append(',');
-						}
-					}
-					Set<ObjectInstance> mBeans = reachMbeanServer.get().queryMBeans(null,
-						new ObjectName(query.toString()));
-					for (ObjectInstance objectInstance : mBeans)
-					{
-						((MbeanNode)node).setObjectInstance(objectInstance, reachMbeanServer);
-					}
-				}
-			}
-		}
-		return model;
-	}
-
-	/**
-	 * @param rootNode
-	 * @param domainNames
-	 */
-	private void addDomainsCildrens(DefaultMutableTreeNode rootNode, Set<Set<String>> domainNames)
-	{
-		Map<String, Set<Set<String>>> parentProps = new HashMap<String, Set<Set<String>>>();
-		for (Set<String> names : domainNames)
-		{
-			List<String> namesList = new ArrayList<String>(names);
-			Collections.sort(namesList, new MBeansTreeNameComparator());
-			if (namesList.size() > 0)
-			{
-				if (parentProps.get(namesList.get(0)) == null)
-				{
-					parentProps.put(namesList.get(0), new HashSet<Set<String>>());
-				}
-				names.remove(namesList.get(0));
-				parentProps.get(namesList.get(0)).add(names);
-			}
-		}
-
-		for (Map.Entry<String, Set<Set<String>>> entry : parentProps.entrySet())
-		{
-			MbeanNode newNode = new MbeanNode(null, entry.getKey());
-			rootNode.add(newNode);
-			addDomainsCildrens(newNode, entry.getValue());
 		}
 	}
 
@@ -273,8 +271,8 @@ public class MBeansPanel extends Panel
 		}
 
 		public void setObjectInstance(ObjectInstance objectInstance,
-			MbeanServerLocator reachMbeanServer) throws InstanceNotFoundException,
-			IntrospectionException, ReflectionException
+				MbeanServerLocator reachMbeanServer) throws InstanceNotFoundException,
+				IntrospectionException, ReflectionException
 		{
 			this.objectInstance = objectInstance;
 			mBeanServerLocator = reachMbeanServer;
@@ -293,7 +291,7 @@ public class MBeansPanel extends Panel
 			if (beanNotificationInfos.length > 0)
 			{
 				DefaultMutableTreeNode notificationsNode = new DefaultMutableTreeNode(
-					"Notification");
+						"Notification");
 				add(notificationsNode);
 				for (MBeanNotificationInfo beanNotificationInfo : beanNotificationInfos)
 				{
@@ -338,7 +336,7 @@ public class MBeansPanel extends Panel
 		public Component getView(String id)
 		{
 			return new AttributeValuesPanel(id, objectInstance.getObjectName(), beanAttributeInfos,
-				mBeanServerLocator);
+					mBeanServerLocator);
 		}
 
 		@Override
@@ -363,7 +361,7 @@ public class MBeansPanel extends Panel
 		public Component getView(String wicketId)
 		{
 			return new AttributeValuesPanel(wicketId, objectInstance.getObjectName(),
-				new MBeanAttributeInfo[] { attributeInfo }, mBeanServerLocator);
+					new MBeanAttributeInfo[]{attributeInfo}, mBeanServerLocator);
 		}
 
 		@Override
@@ -392,7 +390,7 @@ public class MBeansPanel extends Panel
 		public Component getView(String id)
 		{
 			return new OperationsPanel(id, objectInstance.getObjectName(), beanOperationInfos,
-				mBeanServerLocator);
+					mBeanServerLocator);
 		}
 
 		@Override
@@ -417,7 +415,7 @@ public class MBeansPanel extends Panel
 		public Component getView(String wicketId)
 		{
 			return new OperationsPanel(wicketId, objectInstance.getObjectName(),
-				new MBeanOperationInfo[] { beanOperationInfo }, mBeanServerLocator);
+					new MBeanOperationInfo[]{beanOperationInfo}, mBeanServerLocator);
 		}
 
 		@Override
@@ -444,11 +442,4 @@ public class MBeansPanel extends Panel
 			return beanNotificationInfo.getName();
 		}
 	}
-
-	@Override
-	public void renderHead(IHeaderResponse res)
-	{
-		res.render(CssHeaderItem.forReference(CSS));
-	}
-
 }

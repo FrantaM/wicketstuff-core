@@ -27,7 +27,7 @@ import org.apache.wicket.markup.html.panel.Panel;
 
 /**
  * @author Pedro Henrique Oliveira dos Santos
- * 
+ *
  */
 public class DataViewPanel extends Panel
 {

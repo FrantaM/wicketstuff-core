@@ -27,26 +27,23 @@ import javax.management.ObjectName;
 
 /**
  * @author Pedro Henrique Oliveira dos Santos
- * 
  */
 public class DataUtil
 {
-
 	public static Object tryParseToType(Object object, Class<?> clazz)
 	{
 		try
 		{
-			return clazz.getConstructor(new Class[] { String.class })
-				.newInstance(object.toString());
-		}
-		catch (Exception e)
+			return clazz.getConstructor(new Class[]{String.class})
+					.newInstance(object.toString());
+		} catch (Exception e)
 		{
 			return object;
 		}
 	}
 
 	public static Class<?> getClassFromInfo(MBeanAttributeInfo attributeInfo)
-		throws ClassNotFoundException
+			throws ClassNotFoundException
 	{
 		return getClassFromInfo(attributeInfo.getType());
 	}
@@ -78,7 +75,7 @@ public class DataUtil
 	}
 
 	public static Object getCompatibleData(Object object, MBeanParameterInfo beanParameterInfo)
-		throws ClassNotFoundException
+			throws ClassNotFoundException
 	{
 		return tryParseToType(object, getClassFromInfo(beanParameterInfo.getType()));
 	}

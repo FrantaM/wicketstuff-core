@@ -46,18 +46,17 @@ import org.apache.wicket.model.Model;
 
 /**
  * @author Pedro Henrique Oliveira dos Santos
- * 
+ *
  */
 public class OperationsPanel extends Panel
 {
-
 	private static final long serialVersionUID = 1L;
 	private final MbeanServerLocator beanServerLocator;
 	private final ObjectName objectName;
 	private ModalWindow modalOutput;
 
 	public OperationsPanel(String id, final ObjectName objectName,
-		MBeanOperationInfo[] beanOperationInfos, final MbeanServerLocator beanServerLocator)
+			MBeanOperationInfo[] beanOperationInfos, final MbeanServerLocator beanServerLocator)
 	{
 		super(id);
 		this.beanServerLocator = beanServerLocator;
@@ -68,7 +67,7 @@ public class OperationsPanel extends Panel
 		Form<Void> form = new Form<Void>("form");
 		add(form);
 		ListView<MBeanOperationInfo> operations = new ListView<MBeanOperationInfo>("operations",
-			Arrays.asList(beanOperationInfos))
+				Arrays.asList(beanOperationInfos))
 		{
 			private static final long serialVersionUID = 1L;
 
@@ -88,13 +87,12 @@ public class OperationsPanel extends Panel
 					{
 						returnLbl = c.getSimpleName();
 					}
-				}
-				catch (ClassNotFoundException e)
+				} catch (ClassNotFoundException e)
 				{
 				}
 				item.add(new Label("return", returnLbl));
 				final ParameterRepeater parameterRepeater = new ParameterRepeater("parameters",
-					info.getSignature());
+						info.getSignature());
 				item.add(parameterRepeater);
 				final FeedbackPanel feedback = new ComponentFeedbackPanel("feedback", item);
 				feedback.setOutputMarkupId(true);
@@ -114,61 +112,8 @@ public class OperationsPanel extends Panel
 					}
 				});
 			}
-
 		};
 		form.add(operations);
-
-	}
-
-	private abstract class OperationButton extends AjaxButton
-	{
-		private static final long serialVersionUID = 1L;
-		private final ParameterRepeater parameterRepeater;
-		private final MBeanFeatureInfo info;
-
-		public OperationButton(String id, ParameterRepeater parameterRepeater, MBeanFeatureInfo info)
-		{
-			super(id);
-			setModel(Model.of(info.getName()));
-			this.parameterRepeater = parameterRepeater;
-			this.info = info;
-		}
-
-		@Override
-		protected void onSubmit(AjaxRequestTarget target, Form<?> form)
-		{
-			Object returnObj = null;
-			try
-			{
-				returnObj = beanServerLocator.get().invoke(objectName, info.getName(),
-					parameterRepeater.getParams(), parameterRepeater.getSignatures());
-				onSuccessful(returnObj, target);
-			}
-			catch (Exception e)
-			{
-				List<String> returnList = new ArrayList<String>();
-				returnList.add(e.getMessage());
-				StringWriter sw = new StringWriter();
-				PrintWriter pw = new PrintWriter(sw);
-				e.printStackTrace(pw);
-				returnList.add(sw.toString());
-				returnObj = returnList;
-			}
-			if (returnObj != null)
-			{
-				modalOutput.setContent(new DataViewPanel(modalOutput.getContentId(), returnObj));
-				modalOutput.show(target);
-			}
-		}
-
-		protected abstract void onSuccessful(Object returnObj, AjaxRequestTarget target);
-
-		@Override
-		protected void onError(AjaxRequestTarget target, Form<?> form)
-		{
-
-		}
-
 	}
 
 	private static class ParameterRepeater extends ListView<MBeanParameterInfo>
@@ -200,10 +145,9 @@ public class OperationsPanel extends Panel
 				try
 				{
 					params[i] = DataUtil.getCompatibleData(
-						parametersValues.get(beanParameterInfos[i]).getObject(),
-						beanParameterInfos[i]);
-				}
-				catch (ClassNotFoundException e)
+							parametersValues.get(beanParameterInfos[i]).getObject(),
+							beanParameterInfos[i]);
+				} catch (ClassNotFoundException e)
 				{
 					throw new WicketRuntimeException(e);
 				}
@@ -219,6 +163,54 @@ public class OperationsPanel extends Panel
 				params[i] = beanParameterInfos[i].getType();
 			}
 			return params;
+		}
+	}
+
+	private abstract class OperationButton extends AjaxButton
+	{
+		private static final long serialVersionUID = 1L;
+		private final ParameterRepeater parameterRepeater;
+		private final MBeanFeatureInfo info;
+
+		public OperationButton(String id, ParameterRepeater parameterRepeater, MBeanFeatureInfo info)
+		{
+			super(id);
+			setModel(Model.of(info.getName()));
+			this.parameterRepeater = parameterRepeater;
+			this.info = info;
+		}
+
+		@Override
+		protected void onSubmit(AjaxRequestTarget target, Form<?> form)
+		{
+			Object returnObj = null;
+			try
+			{
+				returnObj = beanServerLocator.get().invoke(objectName, info.getName(),
+						parameterRepeater.getParams(), parameterRepeater.getSignatures());
+				onSuccessful(returnObj, target);
+			} catch (Exception e)
+			{
+				List<String> returnList = new ArrayList<String>();
+				returnList.add(e.getMessage());
+				StringWriter sw = new StringWriter();
+				PrintWriter pw = new PrintWriter(sw);
+				e.printStackTrace(pw);
+				returnList.add(sw.toString());
+				returnObj = returnList;
+			}
+			if (returnObj != null)
+			{
+				modalOutput.setContent(new DataViewPanel(modalOutput.getContentId(), returnObj));
+				modalOutput.show(target);
+			}
+		}
+
+		protected abstract void onSuccessful(Object returnObj, AjaxRequestTarget target);
+
+		@Override
+		protected void onError(AjaxRequestTarget target, Form<?> form)
+		{
 		}
 	}
 }

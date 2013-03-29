@@ -22,7 +22,7 @@ import javax.management.MBeanServer;
 
 /**
  * @author Pedro Henrique Oliveira dos Santos
- * 
+ *
  */
 public interface MbeanServerLocator extends Serializable
 {

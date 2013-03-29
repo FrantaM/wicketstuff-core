@@ -47,16 +47,15 @@ import org.apache.wicket.model.Model;
 
 /**
  * @author Pedro Henrique Oliveira dos Santos
- * 
+ *
  */
 public class AttributeValuesPanel extends Panel
 {
-
 	private static final long serialVersionUID = 1L;
 	private ModalWindow modalOutput;
 
 	public AttributeValuesPanel(String id, final ObjectName objectName,
-		MBeanAttributeInfo[] beanAttributeInfos, final MbeanServerLocator mbeanServerLocator)
+			MBeanAttributeInfo[] beanAttributeInfos, final MbeanServerLocator mbeanServerLocator)
 	{
 		super(id);
 		add(modalOutput = new ModalWindow("modalOutput"));
@@ -65,7 +64,6 @@ public class AttributeValuesPanel extends Panel
 		add(form);
 		form.add(new ListView<MBeanAttributeInfo>("attributes", Arrays.asList(beanAttributeInfos))
 		{
-
 			private static final long serialVersionUID = 1L;
 
 			@Override
@@ -82,9 +80,8 @@ public class AttributeValuesPanel extends Panel
 						try
 						{
 							value = mbeanServerLocator.get().getAttribute(objectName,
-								info.getName());
-						}
-						catch (RuntimeMBeanException e)
+									info.getName());
+						} catch (RuntimeMBeanException e)
 						{
 							StringWriter sw = new StringWriter();
 							PrintWriter pw = new PrintWriter(sw);
@@ -94,7 +91,7 @@ public class AttributeValuesPanel extends Panel
 					}
 					AjaxLink<Serializable> link = null;
 					item.add(link = new AjaxLink<Serializable>("value",
-						Model.of((Serializable)value))
+							Model.of((Serializable)value))
 					{
 						private static final long serialVersionUID = 1L;
 
@@ -102,7 +99,7 @@ public class AttributeValuesPanel extends Panel
 						public void onClick(AjaxRequestTarget target)
 						{
 							modalOutput.setContent(new DataViewPanel(modalOutput.getContentId(),
-								getModelObject()));
+									getModelObject()));
 							modalOutput.setTitle(info.getName());
 							modalOutput.show(target);
 						}
@@ -111,7 +108,7 @@ public class AttributeValuesPanel extends Panel
 						public boolean isEnabled()
 						{
 							return getModelObject() instanceof Collection ||
-								getModelObject() != null && getModelObject().getClass().isArray();
+									getModelObject() != null && getModelObject().getClass().isArray();
 						}
 
 						@Override
@@ -119,11 +116,10 @@ public class AttributeValuesPanel extends Panel
 						{
 							return !info.isWritable();
 						}
-
 					});
 					link.add(new Label("label", value == null ? null : value.toString()));
 					item.add(new TextField<Object>("editableValue", new AttributeModel(info,
-						mbeanServerLocator, objectName))
+							mbeanServerLocator, objectName))
 					{
 						private static final long serialVersionUID = 1L;
 
@@ -144,12 +140,10 @@ public class AttributeValuesPanel extends Panel
 						}
 					});
 					item.add(new FeedbackPanel("feedback"));
-				}
-				catch (Exception e)
+				} catch (Exception e)
 				{
 					e.printStackTrace();
 				}
-
 			}
 		});
 	}
@@ -162,7 +156,7 @@ public class AttributeValuesPanel extends Panel
 		private final ObjectName objectName;
 
 		public AttributeModel(MBeanAttributeInfo attributeInfo,
-			MbeanServerLocator mbeanServerLocator, ObjectName objectName)
+				MbeanServerLocator mbeanServerLocator, ObjectName objectName)
 		{
 			this.attributeInfo = attributeInfo;
 			this.mbeanServerLocator = mbeanServerLocator;
@@ -176,25 +170,20 @@ public class AttributeValuesPanel extends Panel
 				try
 				{
 					return mbeanServerLocator.get().getAttribute(objectName,
-						attributeInfo.getName());
-				}
-				catch (AttributeNotFoundException e)
+							attributeInfo.getName());
+				} catch (AttributeNotFoundException e)
 				{
 					e.printStackTrace();
-				}
-				catch (InstanceNotFoundException e)
+				} catch (InstanceNotFoundException e)
 				{
 					e.printStackTrace();
-				}
-				catch (MBeanException e)
+				} catch (MBeanException e)
 				{
 					e.printStackTrace();
-				}
-				catch (ReflectionException e)
+				} catch (ReflectionException e)
 				{
 					e.printStackTrace();
-				}
-				catch (RuntimeMBeanException e)
+				} catch (RuntimeMBeanException e)
 				{
 					e.printStackTrace();
 					return null;
@@ -215,10 +204,9 @@ public class AttributeValuesPanel extends Panel
 					paramWithCorrectType = DataUtil.tryParseToType(object, clazz);
 				}
 				attribute = new Attribute(attributeInfo.getName(), object == null ? null
-					: paramWithCorrectType);
+						: paramWithCorrectType);
 				mbeanServerLocator.get().setAttribute(objectName, attribute);
-			}
-			catch (Exception e)
+			} catch (Exception e)
 			{
 				throw new RuntimeException(e);
 			}
@@ -227,6 +215,5 @@ public class AttributeValuesPanel extends Panel
 		public void detach()
 		{
 		}
-
 	}
 }

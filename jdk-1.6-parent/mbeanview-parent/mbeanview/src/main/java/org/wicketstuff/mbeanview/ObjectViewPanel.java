@@ -27,18 +27,11 @@ import org.apache.wicket.markup.html.panel.Panel;
 
 /**
  * @author Pedro Henrique Oliveira dos Santos
- * 
+ *
  */
 public class ObjectViewPanel<T> extends Panel
 {
 	private static final long serialVersionUID = 1L;
-
-	public static class PropValue implements Serializable
-	{
-		private static final long serialVersionUID = 1L;
-		String property;
-		Object value;
-	}
 
 	public ObjectViewPanel(String id, T object)
 	{
@@ -56,8 +49,7 @@ public class ObjectViewPanel<T> extends Panel
 				{
 					prop.property = method.getName();
 					prop.value = method.invoke(object, (Object[])null);
-				}
-				catch (Exception e)
+				} catch (Exception e)
 				{
 					e.printStackTrace();
 				}
@@ -73,8 +65,15 @@ public class ObjectViewPanel<T> extends Panel
 			{
 				item.add(new Label("property", item.getModelObject().property));
 				item.add(new Label("value", item.getModelObject().value == null ? null
-					: item.getModelObject().value.toString()));
+						: item.getModelObject().value.toString()));
 			}
 		});
+	}
+
+	public static class PropValue implements Serializable
+	{
+		private static final long serialVersionUID = 1L;
+		String property;
+		Object value;
 	}
 }
