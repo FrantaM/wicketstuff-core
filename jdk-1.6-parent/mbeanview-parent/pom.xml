@@ -15,11 +15,6 @@
 	<name>MBeanView - Parent</name>
 	<description>Jmx panel, to view and operate the applications mbeans</description>
 
-	<modules>
-		<module>mbeanview</module>
-		<module>mbeanview-examples</module>
-	</modules>
-
 	<developers>
 		<developer>
 			<name>Pedro Henrique Oliveira dos Santos</name>
@@ -28,10 +23,31 @@
 			<timezone>-4</timezone>
 		</developer>
 	</developers>
+
+	<modules>
+		<module>mbeanview</module>
+		<module>mbeanview-examples</module>
+	</modules>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.wicket</groupId>
 			<artifactId>wicket-extensions</artifactId>
 		</dependency>
 	</dependencies>
+
+	<build>
+		<resources>
+			<resource>
+				<filtering>false</filtering>
+				<directory>src/main/resources</directory>
+			</resource>
+		</resources>
+		<testResources>
+			<testResource>
+				<filtering>false</filtering>
+				<directory>src/test/resources</directory>
+			</testResource>
+		</testResources>
+	</build>
 </project>
