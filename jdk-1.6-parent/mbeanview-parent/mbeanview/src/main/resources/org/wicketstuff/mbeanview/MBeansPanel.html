@@ -16,15 +16,9 @@
 -->
 <html xmlns:wicket>
 	<wicket:panel>
-		<table>
-			<tr>
-				<td style="vertical-align: top;">
-					<div wicket:id="mBeansTree" style="width: 400px;"></div>
-				</td>
-				<td style="vertical-align: top;">
-					<div wicket:id="view"></div>
-				</td>
-			</tr>
-		</table>
+		<div class="mbeanview">
+			<div wicket:id="tree" class="tree"></div>
+			<div wicket:id="view" class="view"></div>
+		</div>
 	</wicket:panel>
 </html>

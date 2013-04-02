@@ -1,0 +1,17 @@
+.mbeanview .tree {
+	padding: 0 1em 1em 1em;
+	border: 1px solid #ccc;
+	display: inline-block;
+}
+.mbeanview .tree .tree-mbean {
+	background-image: url(mbean.gif);
+	background-size: 16px;
+}
+.mbeanview .tree .tree-mbean-delegate {
+	background-image: url(mbeanserverdelegate.gif);
+	background-size: 16px;
+}
+
+.mbeanview .view {
+	display: inline-block;
+}

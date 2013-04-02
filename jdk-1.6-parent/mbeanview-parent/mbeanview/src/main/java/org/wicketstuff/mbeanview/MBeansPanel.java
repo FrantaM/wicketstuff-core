@@ -36,26 +36,23 @@ import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.ajax.AjaxRequestTarget;
-import org.apache.wicket.extensions.markup.html.repeater.tree.DefaultNestedTree;
 import org.apache.wicket.extensions.markup.html.tree.Tree;
 import org.apache.wicket.markup.head.CssHeaderItem;
 import org.apache.wicket.markup.head.IHeaderResponse;
 import org.apache.wicket.markup.html.panel.EmptyPanel;
 import org.apache.wicket.markup.html.panel.Panel;
-import org.apache.wicket.request.resource.PackageResourceReference;
-import org.apache.wicket.request.resource.ResourceReference;
-import org.wicketstuff.mbeanview.nodes.MBeanTreeNode;
+import org.apache.wicket.request.resource.CssResourceReference;
 
 /**
  * Jmx panel, to view and operate the applications mbeans
  *
  * @author Pedro Henrique Oliveira dos Santos
+ * @author Franta Mejta
  */
 public class MBeansPanel extends Panel
 {
-	public static final String VIEW_PANEL_ID = "view";
 	private static final long serialVersionUID = 1L;
-	private static final ResourceReference CSS = new PackageResourceReference(MBeansPanel.class, "css/MBeansPanel.css");
+	private static final String VIEW_PANEL_ID = "view";
 	private static final IMBeanServerConnectionProvider PLATFORM_PROVIDER = new IMBeanServerConnectionProvider()
 	{
 		@Override
@@ -75,21 +72,21 @@ public class MBeansPanel extends Panel
 	{
 		super(id);
 
-		this.add(new DefaultNestedTree<MBeanTreeNode>("mBeansTree", new MBeanNodesProvider(connection)));
+		this.add(new MBeanTree("tree", new MBeanNodesProvider(connection)));
 		this.add(new EmptyPanel(VIEW_PANEL_ID).setOutputMarkupId(true));
 	}
 
 	@Override
-	public void renderHead(IHeaderResponse res)
+	public void renderHead(final IHeaderResponse response)
 	{
-		res.render(CssHeaderItem.forReference(CSS));
+		response.render(CssHeaderItem.forReference(new CssResourceReference(MBeansPanel.class, "mbeanview.css")));
 	}
 
-	private class MBeanTree extends Tree
+	private class MBeanTree2 extends Tree
 	{
 		private static final long serialVersionUID = 1L;
 
-		public MBeanTree(String id, TreeModel model)
+		public MBeanTree2(String id, TreeModel model)
 		{
 			super(id, model);
 			getTreeState().expandNode(getModelObject().getRoot());
@@ -196,7 +193,7 @@ public class MBeansPanel extends Panel
 
 		public Component getView(String wicketId)
 		{
-			return new MBeanTree(wicketId, new DefaultTreeModel(this));
+			return new MBeanTree2(wicketId, new DefaultTreeModel(this));
 		}
 
 	}

@@ -71,6 +71,11 @@ public class MBeanNode extends MBeanTreeNode
 		this.properties = nodeProperties;
 	}
 
+	public ObjectName getObjectName()
+	{
+		return this.objectName;
+	}
+
 	@Override
 	public List<MBeanNode> getChildren()
 	{
