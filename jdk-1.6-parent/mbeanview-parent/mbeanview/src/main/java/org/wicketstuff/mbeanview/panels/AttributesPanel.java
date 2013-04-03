@@ -13,22 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.wicketstuff.mbeanview;
+package org.wicketstuff.mbeanview.panels;
 
-import java.io.Serializable;
+import javax.management.ObjectName;
 
-import javax.management.MBeanServerConnection;
+import org.apache.wicket.markup.html.panel.GenericPanel;
+import org.wicketstuff.mbeanview.IMBeanServerConnectionProvider;
 
 /**
+ *
  * @author Franta Mejta
- * @sa.date 2013-03-29T16:14:56+0100
+ * @sa.date 2013-04-03T10:53:24+0200
  */
-public interface IMBeanServerConnectionProvider extends Serializable
+public class AttributesPanel extends GenericPanel<ObjectName>
 {
-	/**
-	 * Returns connection to MBean server.
-	 * @return Connection to MBean server.
-	 */
-	MBeanServerConnection get();
+	private static final long serialVersionUID = 20130403;
+
+	public AttributesPanel(final String id, final IMBeanServerConnectionProvider connection, final ObjectName objectName)
+	{
+		super(id);
+
+	}
 
 }

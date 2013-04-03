@@ -1,6 +1,6 @@
 .mbeanview .tree {
 	padding: 0 1em 1em 1em;
-	border: 1px solid #ccc;
+	border: 1px solid silver;
 	display: inline-block;
 }
 .mbeanview .tree .tree-mbean {
@@ -14,4 +14,29 @@
 
 .mbeanview .view {
 	display: inline-block;
+	border: 1px solid silver;
+	vertical-align: top;
+}
+.mbeanview .view .tab-row ul {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+	border-bottom: 1px solid silver;
+}
+.mbeanview .view .tab-row ul li {
+	display: inline-block;
+}
+.mbeanview .view .tab-row ul li.selected {
+	background-color: whitesmoke;
+}
+.mbeanview .view .tab-row ul li:not(.last) {
+	border-right: 1px solid silver;
+}
+.mbeanview .view .tab-row ul a {
+	display: inline-block;
+	padding: .2em .4em;
+	text-decoration: none;
+}
+.mbeanview .view .tab-panel {
+	padding: .5em;
 }

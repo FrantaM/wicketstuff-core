@@ -36,9 +36,8 @@ import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.event.IEvent;
 import org.apache.wicket.extensions.markup.html.tree.Tree;
-import org.apache.wicket.markup.head.CssHeaderItem;
-import org.apache.wicket.markup.head.IHeaderResponse;
 import org.apache.wicket.markup.html.panel.EmptyPanel;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.request.resource.CssResourceReference;
@@ -53,33 +52,52 @@ public class MBeansPanel extends Panel
 {
 	private static final long serialVersionUID = 1L;
 	private static final String VIEW_PANEL_ID = "view";
-	private static final IMBeanServerConnectionProvider PLATFORM_PROVIDER = new IMBeanServerConnectionProvider()
-	{
-		@Override
-		public MBeanServerConnection get()
-		{
-			return ManagementFactory.getPlatformMBeanServer();
-		}
-
-	};
+	static final CssResourceReference STYLE = new CssResourceReference(MBeansPanel.class, "mbeanview.css");
+	private final IMBeanServerConnectionProvider connection;
 
 	public MBeansPanel(final String id)
 	{
-		this(id, PLATFORM_PROVIDER);
+		this(id, PlatformProvider.INSTANCE);
 	}
 
 	public MBeansPanel(final String id, final IMBeanServerConnectionProvider connection)
 	{
 		super(id);
 
-		this.add(new MBeanTree("tree", new MBeanNodesProvider(connection)));
+		this.add(new MBeanTree("tree", new MBeanNodesProvider(this.connection = connection)));
 		this.add(new EmptyPanel(VIEW_PANEL_ID).setOutputMarkupId(true));
 	}
 
 	@Override
-	public void renderHead(final IHeaderResponse response)
+	public void onEvent(final IEvent<?> event)
 	{
-		response.render(CssHeaderItem.forReference(new CssResourceReference(MBeansPanel.class, "mbeanview.css")));
+		final Object payload = event.getPayload();
+		if (payload instanceof MBeanTree.MBeanSelectedEvent)
+		{
+			final MBeanTree.MBeanSelectedEvent eventPayload = (MBeanTree.MBeanSelectedEvent) payload;
+			final MBeanPanel panel = new MBeanPanel(VIEW_PANEL_ID, this.connection, eventPayload.getObjectName());
+
+			this.replace(panel);
+
+			final AjaxRequestTarget ajax = this.getRequestCycle().find(AjaxRequestTarget.class);
+			if (ajax != null)
+			{
+				ajax.add(panel);
+			}
+		}
+	}
+
+	private static final class PlatformProvider implements IMBeanServerConnectionProvider
+	{
+		private static final long serialVersionUID = 20130403;
+		private static final PlatformProvider INSTANCE = new PlatformProvider();
+
+		@Override
+		public MBeanServerConnection get()
+		{
+			return ManagementFactory.getPlatformMBeanServer();
+		}
+
 	}
 
 	private class MBeanTree2 extends Tree
