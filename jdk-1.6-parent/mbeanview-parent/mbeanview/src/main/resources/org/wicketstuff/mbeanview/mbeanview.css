@@ -52,14 +52,11 @@
 	display: inline-block;
 	margin: 0;
 }
-.mbeanview .view .tab-panel .operations dt > pre:first-child {
-	min-width: 10em;
-	text-align: right;
+.mbeanview .view .tab-panel .operations form {
+	margin: 0;
 }
-.mbeanview .view .tab-panel .operations dd {
-	padding-left: 10em;
-	font-style: italic;
-	margin: 0 0 1em 0;
+.mbeanview .view .tab-panel .operations td:first-child {
+	text-align: right;
 }
 .mbeanview .view .tab-panel .operations input {
 	height: 1.2em;

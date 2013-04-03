@@ -15,18 +15,36 @@
  */
 package org.wicketstuff.mbeanview.panels;
 
+import java.io.Serializable;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
 import javax.management.MBeanOperationInfo;
 import javax.management.MBeanParameterInfo;
 import javax.management.ObjectName;
 
 import org.apache.wicket.AttributeModifier;
+import org.apache.wicket.Component;
+import org.apache.wicket.MetaDataKey;
+import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.markup.html.form.AjaxButton;
+import org.apache.wicket.event.Broadcast;
+import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxButton;
+import org.apache.wicket.extensions.ajax.markup.html.modal.ModalWindow;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.markup.html.form.Form;
+import org.apache.wicket.markup.html.form.FormComponent;
+import org.apache.wicket.markup.html.form.RequiredTextField;
 import org.apache.wicket.markup.html.form.TextField;
+import org.apache.wicket.markup.html.panel.FeedbackPanel;
 import org.apache.wicket.markup.html.panel.Fragment;
 import org.apache.wicket.markup.html.panel.GenericPanel;
 import org.apache.wicket.markup.repeater.RepeatingView;
+import org.apache.wicket.model.Model;
 import org.apache.wicket.util.lang.Classes;
+import org.apache.wicket.util.visit.IVisit;
+import org.apache.wicket.util.visit.IVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,12 +57,18 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 {
 	private static final long serialVersionUID = 20130403;
 	private static final Logger log = LoggerFactory.getLogger(OperationsPanel.class);
+	private static final MetaDataKey<Integer> PARAMETER_INDEX = new MetaDataKey<Integer>()
+	{
+		private static final long serialVersionUID = 1L;
+	};
+	private final ModalWindow operationOutput;
 
 	public OperationsPanel(final String id, final MBeanOperationInfo[] operations)
 	{
 		super(id);
 
 		this.add(this.newOperationsList("operation", operations));
+		this.add(this.operationOutput = new ModalWindow("output"));
 	}
 
 	private RepeatingView newOperationsList(final String id, final MBeanOperationInfo[] operations)
@@ -52,34 +76,114 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 		final RepeatingView view = new RepeatingView(id);
 		for (final MBeanOperationInfo operation : operations)
 		{
-			final WebMarkupContainer row = new WebMarkupContainer(view.newChildId());
-
 			final ClassName returnType = this.className(operation.getReturnType());
-			row.add(new Label("returnType", returnType.simpleName)
-					.add(AttributeModifier.replace("title", returnType.name)));
-			row.add(new Label("methodName", operation.getName()));
+			final Component returnTypeLabel = new Label("returnType", returnType.simpleName)
+					.add(AttributeModifier.replace("title", returnType.name));
 
-			final RepeatingView parameters = new RepeatingView("parameter");
-			final MBeanParameterInfo[] mbeanParameters = operation.getSignature();
-			for (int i = 0; i < mbeanParameters.length; ++i)
-			{
-				final MBeanParameterInfo mbeanParameter = mbeanParameters[i];
-				final WebMarkupContainer parameterCont = new WebMarkupContainer(parameters.newChildId());
-				parameterCont.add(new Label("parameterName", mbeanParameter.getName()));
-				parameterCont.add(this.editorFor("parameterEditor", mbeanParameter));
-				parameterCont.add(new WebMarkupContainer("separator").setVisibilityAllowed(i > 0));
+			final WebMarkupContainer descriptionRow = new WebMarkupContainer("description-row");
+			descriptionRow.setVisibilityAllowed(!operation.getName().equalsIgnoreCase(operation.getDescription()));
+			descriptionRow.add(new Label("description", operation.getDescription()));
 
-				parameters.add(parameterCont);
-			}
-
-			row.add(parameters);
-			row.add(new Label("description", operation.getDescription())
-					.setVisibilityAllowed(!operation.getName().equalsIgnoreCase(operation.getDescription())));
+			final WebMarkupContainer row = new WebMarkupContainer(view.newChildId());
+			row.add(returnTypeLabel);
+			row.add(this.newMethodCallForm("methodCall", operation));
+			row.add(descriptionRow);
 
 			view.add(row);
 		}
 
 		return view;
+	}
+
+	private WebMarkupContainer newMethodCallForm(final String id, final MBeanOperationInfo operation)
+	{
+		final Form<?> form = new Form<Void>(id);
+		form.add(this.newMethodCallButton("method", operation));
+
+		final RepeatingView parameters = new RepeatingView("parameter");
+		final MBeanParameterInfo[] mbeanParameters = operation.getSignature();
+		for (int i = 0; i < mbeanParameters.length; ++i)
+		{
+			final MBeanParameterInfo mbeanParameter = mbeanParameters[i];
+			final WebMarkupContainer parameterCont = new WebMarkupContainer(parameters.newChildId());
+			parameterCont.add(new Label("parameterName", mbeanParameter.getName()));
+			parameterCont.add(this.editorFor("parameterEditor", mbeanParameter, i));
+			parameterCont.add(new WebMarkupContainer("separator").setVisibilityAllowed(i > 0));
+
+			parameters.add(parameterCont);
+		}
+
+		form.add(parameters);
+
+		return form;
+	}
+
+	private WebMarkupContainer newMethodCallButton(final String id, final MBeanOperationInfo operation)
+	{
+		final AjaxButton button = new IndicatingAjaxButton(id)
+		{
+			private static final long serialVersionUID = 1L;
+
+			private Object[] collectParameters(final Form<?> form)
+			{
+				final SortedMap<Integer, Object> parameters = new TreeMap<Integer, Object>();
+				form.visitFormComponents(new IVisitor<FormComponent<?>, Void>()
+				{
+					@Override
+					public void component(final FormComponent<?> object, final IVisit<Void> visit)
+					{
+						final Integer index = object.getMetaData(PARAMETER_INDEX);
+						if (index != null)
+						{
+							assert !parameters.containsKey(index) : "Duplicate parameter index [" + index + "].";
+							parameters.put(index, object.getConvertedInput());
+						}
+					}
+
+				});
+
+				return parameters.values().toArray();
+			}
+
+			@Override
+			protected void onSubmit(final AjaxRequestTarget target, final Form<?> form)
+			{
+				final InvokeOperationEvent event = new InvokeOperationEvent(operation, this.collectParameters(form));
+				this.send(this, Broadcast.BUBBLE, event);
+
+				final StringBuilder result = new StringBuilder();
+				if (event.getException() != null)
+				{
+					result.append("Problem invoking ");
+					result.append(operation.getName());
+					result.append(": ");
+					result.append(event.getException());
+				}
+				else
+				{
+					result.append("Operation invoked successfully.");
+					if (event.getResult() != null)
+					{
+						result.append(" Result: ");
+						result.append(event.getResult());
+					}
+				}
+
+				operationOutput.setContent(new Label(operationOutput.getContentId(), result.toString()));
+				operationOutput.show(target);
+			}
+
+			@Override
+			protected void onError(final AjaxRequestTarget target, final Form<?> form)
+			{
+				operationOutput.setContent(new FeedbackPanel(operationOutput.getContentId()));
+				operationOutput.show(target);
+			}
+
+		};
+
+		button.add(new Label("methodName", operation.getName()));
+		return button;
 	}
 
 	private ClassName className(final String jmxType)
@@ -94,7 +198,8 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 			cn.simpleName = Classes.simpleName(clazz);
 			cn.name = clazz.getName();
 
-			if (clazz.isArray()) {
+			if (clazz.isArray())
+			{
 				cn.name = String.format("%s[]", clazz.getComponentType().getName());
 			}
 		}
@@ -106,9 +211,10 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 		return cn;
 	}
 
-	private WebMarkupContainer editorFor(final String id, final MBeanParameterInfo parameter)
+	private WebMarkupContainer editorFor(final String id, final MBeanParameterInfo parameter, final Integer index)
 	{
-		final TextField<?> input = new TextField<String>("parameterValue");
+		final TextField<?> input = new RequiredTextField<String>("parameterValue", Model.<String>of());
+		input.setMetaData(PARAMETER_INDEX, index);
 		input.add(AttributeModifier.replace("placeholder", this.className(parameter.getType()).simpleName));
 
 		final Fragment fragment = new Fragment(id, "editor-text", this);
@@ -121,6 +227,52 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 	{
 		private String simpleName;
 		private String name;
+	}
+
+	public static final class InvokeOperationEvent implements Serializable
+	{
+		private static final long serialVersionUID = 20130403;
+		private final MBeanOperationInfo operation;
+		private final Object[] parameters;
+		private Object result;
+		private Exception exception;
+
+		public InvokeOperationEvent(final MBeanOperationInfo operation, final Object... parameters)
+		{
+			this.operation = operation;
+			this.parameters = parameters;
+		}
+
+		public MBeanOperationInfo getOperation()
+		{
+			return operation;
+		}
+
+		public Object[] getParameters()
+		{
+			return parameters;
+		}
+
+		public Object getResult()
+		{
+			return result;
+		}
+
+		public void setResult(Object result)
+		{
+			this.result = result;
+		}
+
+		public Exception getException()
+		{
+			return exception;
+		}
+
+		public void setException(Exception exception)
+		{
+			this.exception = exception;
+		}
+
 	}
 
 }

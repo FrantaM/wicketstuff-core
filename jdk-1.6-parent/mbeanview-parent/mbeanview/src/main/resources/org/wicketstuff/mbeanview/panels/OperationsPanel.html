@@ -2,22 +2,33 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:wicket="http://wicket.apache.org">
 	<body>
 		<wicket:panel>
-			<dl class="operations">
+			<div wicket:id="output"></div>
+
+			<table class="operations">
 				<wicket:container wicket:id="operation">
-					<dt>
-						<pre wicket:id="returnType">[int]</pre>
-						<button><pre wicket:id="methodName">[setSomeValue]</pre></button>
-						<pre>(</pre>
-						<wicket:container wicket:id="parameter">
-							<pre wicket:id="separator">, </pre>
-							<pre wicket:id="parameterName">[arg0]</pre>
-							<wicket:container wicket:id="parameterEditor"><input type="text" /></wicket:container>
-						</wicket:container>
-						<pre>)</pre>
-					</dt>
-					<dd wicket:id="description"></dd>
+					<tr>
+						<td>
+							<pre wicket:id="returnType">[int]</pre>
+						</td>
+						<td>
+							<form wicket:id="methodCall">
+								<button wicket:id="method"><pre wicket:id="methodName">[setSomeValue]</pre></button>
+								<pre>(</pre>
+								<wicket:container wicket:id="parameter">
+									<pre wicket:id="separator">, </pre>
+									<pre wicket:id="parameterName">[arg0]</pre>
+									<wicket:container wicket:id="parameterEditor"><input type="text" /></wicket:container>
+								</wicket:container>
+								<pre>)</pre>
+							</form>
+						</td>
+					</tr>
+					<tr wicket:id="description-row">
+						<td></td>
+						<td><i wicket:id="description">[description]</i></td>
+					</tr>
 				</wicket:container>
-			</dl>
+			</table>
 
 			<wicket:fragment wicket:id="editor-text">
 				<input wicket:id="parameterValue" type="text" />
