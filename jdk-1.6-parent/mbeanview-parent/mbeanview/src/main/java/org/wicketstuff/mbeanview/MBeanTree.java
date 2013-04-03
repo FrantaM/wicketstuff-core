@@ -21,8 +21,8 @@ import javax.management.MBeanServerDelegate;
 import javax.management.ObjectName;
 
 import org.apache.wicket.Component;
+import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.event.Broadcast;
-import org.apache.wicket.extensions.markup.html.repeater.tree.AbstractTree;
 import org.apache.wicket.extensions.markup.html.repeater.tree.DefaultNestedTree;
 import org.apache.wicket.extensions.markup.html.repeater.tree.ITreeProvider;
 import org.apache.wicket.extensions.markup.html.repeater.tree.content.Folder;
@@ -41,6 +41,7 @@ import org.wicketstuff.mbeanview.nodes.MBeanTreeNode;
 public final class MBeanTree extends DefaultNestedTree<MBeanTreeNode>
 {
 	private static final long serialVersionUID = 20130402;
+	private MBeanTreeNode lastClickedNode;
 
 	public MBeanTree(final String id, final ITreeProvider<MBeanTreeNode> provider)
 	{
@@ -55,35 +56,9 @@ public final class MBeanTree extends DefaultNestedTree<MBeanTreeNode>
 	}
 
 	@Override
-	public void collapse(final MBeanTreeNode t)
-	{
-		super.collapse(t);
-		this.displayMBean(t);
-	}
-
-	@Override
-	public void expand(final MBeanTreeNode t)
-	{
-		super.expand(t);
-		this.displayMBean(t);
-	}
-
-	private void displayMBean(final MBeanTreeNode t)
-	{
-		if (t instanceof MBeanNode)
-		{
-			final ObjectName objectName = ((MBeanNode) t).getObjectName();
-			if (objectName != null)
-			{
-				this.send(this, Broadcast.BUBBLE, new MBeanSelectedEvent(objectName));
-			}
-		}
-	}
-
-	@Override
 	protected Component newContentComponent(final String id, final IModel<MBeanTreeNode> node)
 	{
-		return new TreeFolder(id, this, node);
+		return new TreeFolder(id, node);
 	}
 
 	public static final class MBeanSelectedEvent implements Serializable
@@ -103,13 +78,35 @@ public final class MBeanTree extends DefaultNestedTree<MBeanTreeNode>
 
 	}
 
-	private static final class TreeFolder extends Folder<MBeanTreeNode>
+	private final class TreeFolder extends Folder<MBeanTreeNode>
 	{
-		private static final long serialVersionUID = 20130402;
+		private static final long serialVersionUID = 20130403;
 
-		public TreeFolder(final String id, final AbstractTree<MBeanTreeNode> tree, final IModel<MBeanTreeNode> model)
+		public TreeFolder(final String id, final IModel<MBeanTreeNode> model)
 		{
-			super(id, tree, model);
+			super(id, MBeanTree.this, model);
+		}
+
+		@Override
+		protected void onClick(final AjaxRequestTarget target)
+		{
+			super.onClick(target);
+
+			if (lastClickedNode != null)
+			{
+				updateNode(lastClickedNode, target);
+			}
+
+			final MBeanTreeNode model = this.getModelObject();
+			if (model instanceof MBeanNode)
+			{
+				final MBeanNode node = (MBeanNode) model;
+				if (node.getObjectName() != null)
+				{
+					lastClickedNode = node;
+					this.send(this, Broadcast.BUBBLE, new MBeanSelectedEvent(node.getObjectName()));
+				}
+			}
 		}
 
 		@Override
@@ -118,6 +115,12 @@ public final class MBeanTree extends DefaultNestedTree<MBeanTreeNode>
 			/* MBeanNode is either mbean (objectName != null) or group (!children.isEmpty()).
 			 * In both cases should be clickable. */
 			return super.isClickable() || this.getModelObject() instanceof MBeanNode;
+		}
+
+		@Override
+		protected boolean isSelected()
+		{
+			return this.getModelObject() == lastClickedNode;
 		}
 
 		@Override

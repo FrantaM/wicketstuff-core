@@ -293,7 +293,7 @@ public class MBeansPanel extends Panel
 		@Override
 		public Component getView(String id)
 		{
-			return new OperationsPanel(id, objectInstance.getObjectName(), beanOperationInfos,
+			return new OperationsPanel2(id, objectInstance.getObjectName(), beanOperationInfos,
 					mBeanServerLocator);
 		}
 
@@ -319,7 +319,7 @@ public class MBeansPanel extends Panel
 		@Override
 		public Component getView(String wicketId)
 		{
-			return new OperationsPanel(wicketId, objectInstance.getObjectName(),
+			return new OperationsPanel2(wicketId, objectInstance.getObjectName(),
 					new MBeanOperationInfo[]
 			{
 				beanOperationInfo

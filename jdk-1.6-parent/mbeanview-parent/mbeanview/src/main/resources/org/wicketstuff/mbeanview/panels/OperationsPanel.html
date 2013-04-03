@@ -2,7 +2,26 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:wicket="http://wicket.apache.org">
 	<body>
 		<wicket:panel>
-			todo operation
+			<dl class="operations">
+				<wicket:container wicket:id="operation">
+					<dt>
+						<pre wicket:id="returnType">[int]</pre>
+						<button><pre wicket:id="methodName">[setSomeValue]</pre></button>
+						<pre>(</pre>
+						<wicket:container wicket:id="parameter">
+							<pre wicket:id="separator">, </pre>
+							<pre wicket:id="parameterName">[arg0]</pre>
+							<wicket:container wicket:id="parameterEditor"><input type="text" /></wicket:container>
+						</wicket:container>
+						<pre>)</pre>
+					</dt>
+					<dd wicket:id="description"></dd>
+				</wicket:container>
+			</dl>
+
+			<wicket:fragment wicket:id="editor-text">
+				<input wicket:id="parameterValue" type="text" />
+			</wicket:fragment>
 		</wicket:panel>
 	</body>
 </html>

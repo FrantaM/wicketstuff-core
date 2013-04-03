@@ -15,20 +15,27 @@
  */
 package org.wicketstuff.mbeanview;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.management.JMException;
+import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 
 import org.apache.wicket.extensions.ajax.markup.html.tabs.AjaxTabbedPanel;
 import org.apache.wicket.extensions.markup.html.tabs.AbstractTab;
 import org.apache.wicket.extensions.markup.html.tabs.ITab;
-import org.apache.wicket.extensions.markup.html.tabs.PanelCachingTab;
 import org.apache.wicket.extensions.markup.html.tabs.TabbedPanel;
 import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.panel.EmptyPanel;
 import org.apache.wicket.markup.html.panel.GenericPanel;
+import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.wicketstuff.mbeanview.panels.AttributesPanel;
+import org.wicketstuff.mbeanview.panels.OperationsPanel;
 
 /**
  *
@@ -38,6 +45,7 @@ import org.wicketstuff.mbeanview.panels.AttributesPanel;
 public class MBeanPanel extends GenericPanel<ObjectName>
 {
 	private static final long serialVersionUID = 20130403;
+	private static final Logger log = LoggerFactory.getLogger(MBeanPanel.class);
 	private final IMBeanServerConnectionProvider connection;
 
 	public MBeanPanel(final String id, final IMBeanServerConnectionProvider connection, final ObjectName objectName)
@@ -52,36 +60,115 @@ public class MBeanPanel extends GenericPanel<ObjectName>
 	private TabbedPanel<ITab> newTabbedPanel(final String id)
 	{
 		final List<ITab> tabs = new ArrayList<ITab>();
-		tabs.add(new AbstractTab(Model.of("Attributes"))
+		tabs.add(new MBeanInfoTab(Model.of("Attributes"))
 		{
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public WebMarkupContainer getPanel(final String panelId)
+			protected boolean isEnabled(final MBeanInfo mbeanInfo)
+			{
+				return mbeanInfo.getAttributes().length > 0;
+			}
+
+			@Override
+			public WebMarkupContainer getPanel(final String panelId, final MBeanInfo mbeanInfo)
 			{
 				return new AttributesPanel(panelId, connection, getModelObject());
 			}
 
 		});
-		tabs.add(new AbstractTab(Model.of("Operations"))
+		tabs.add(new MBeanInfoTab(Model.of("Operations"))
 		{
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public WebMarkupContainer getPanel(final String panelId)
+			protected boolean isEnabled(final MBeanInfo mbeanInfo)
 			{
-				return new org.wicketstuff.mbeanview.panels.OperationsPanel(panelId, connection, getModelObject());
+				return mbeanInfo.getOperations().length > 0;
+			}
+
+			@Override
+			public WebMarkupContainer getPanel(final String panelId, final MBeanInfo mbeanInfo)
+			{
+				return new OperationsPanel(panelId, mbeanInfo.getOperations());
 			}
 
 		});
 
-		final List<ITab> cachedTabs = new ArrayList<ITab>(tabs.size());
-		for (final ITab tab : tabs)
+		return new AjaxTabbedPanel<ITab>(id, tabs)
 		{
-			cachedTabs.add(new PanelCachingTab(tab));
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected WebMarkupContainer newLink(final String linkId, final int index)
+			{
+				return (WebMarkupContainer) super.newLink(linkId, index)
+						.setEnabled(((MBeanInfoTab) this.getTabs().get(index)).isEnabled());
+			}
+
+		};
+	}
+
+	private abstract class MBeanInfoTab extends AbstractTab
+	{
+		private transient MBeanInfo mbeanInfo;
+		private transient WebMarkupContainer panel;
+
+		public MBeanInfoTab(final IModel<String> title)
+		{
+			super(title);
 		}
 
-		return new AjaxTabbedPanel<ITab>(id, cachedTabs);
+		private MBeanInfo loadMBeanInfo()
+		{
+			try
+			{
+				if (this.mbeanInfo == null)
+				{
+					this.mbeanInfo = connection.get().getMBeanInfo(getModelObject());
+				}
+				return this.mbeanInfo;
+			}
+			catch (final IOException ex)
+			{
+				log.warn("Cannot read from mbean server.", ex);
+				return null;
+			}
+			catch (final JMException ex)
+			{
+				log.warn("Cannot retrieve mbean info.", ex);
+				return null;
+			}
+		}
+
+		@Override
+		public final WebMarkupContainer getPanel(final String panelId)
+		{
+			if (this.panel == null)
+			{
+				final MBeanInfo info = this.loadMBeanInfo();
+				if (info != null)
+				{
+					this.panel = this.getPanel(panelId, info);
+				}
+				else
+				{
+					this.panel = new EmptyPanel(panelId);
+				}
+			}
+
+			return this.panel;
+		}
+
+		public final boolean isEnabled()
+		{
+			return this.isEnabled(this.loadMBeanInfo());
+		}
+
+		protected abstract boolean isEnabled(final MBeanInfo mbeanInfo);
+
+		protected abstract WebMarkupContainer getPanel(final String panelId, final MBeanInfo mbeanInfo);
+
 	}
 
 }

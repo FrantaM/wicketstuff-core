@@ -11,6 +11,10 @@
 	background-image: url(mbeanserverdelegate.gif);
 	background-size: 16px;
 }
+.mbeanview .tree .tree-content .selected .tree-label {
+	color: red;
+	background-color: transparent;
+}
 
 .mbeanview .view {
 	display: inline-block;
@@ -22,9 +26,12 @@
 	margin: 0;
 	padding: 0;
 	border-bottom: 1px solid silver;
+	display: table;
+	width: 100%;
 }
 .mbeanview .view .tab-row ul li {
-	display: inline-block;
+	display: table-cell;
+	overflow: hidden;
 }
 .mbeanview .view .tab-row ul li.selected {
 	background-color: whitesmoke;
@@ -33,10 +40,30 @@
 	border-right: 1px solid silver;
 }
 .mbeanview .view .tab-row ul a {
-	display: inline-block;
+	display: block;
 	padding: .2em .4em;
 	text-decoration: none;
+	width: 100%;
 }
 .mbeanview .view .tab-panel {
 	padding: .5em;
+}
+.mbeanview .view .tab-panel .operations pre {
+	display: inline-block;
+	margin: 0;
+}
+.mbeanview .view .tab-panel .operations dt > pre:first-child {
+	min-width: 10em;
+	text-align: right;
+}
+.mbeanview .view .tab-panel .operations dd {
+	padding-left: 10em;
+	font-style: italic;
+	margin: 0 0 1em 0;
+}
+.mbeanview .view .tab-panel .operations input {
+	height: 1.2em;
+	border-width: 1px;
+	vertical-align: middle;
+	text-align: center;
 }

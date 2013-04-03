@@ -48,14 +48,14 @@ import org.apache.wicket.model.Model;
  * @author Pedro Henrique Oliveira dos Santos
  *
  */
-public class OperationsPanel extends Panel
+public class OperationsPanel2 extends Panel
 {
 	private static final long serialVersionUID = 1L;
 	private final MbeanServerLocator beanServerLocator;
 	private final ObjectName objectName;
 	private ModalWindow modalOutput;
 
-	public OperationsPanel(String id, final ObjectName objectName,
+	public OperationsPanel2(String id, final ObjectName objectName,
 			MBeanOperationInfo[] beanOperationInfos, final MbeanServerLocator beanServerLocator)
 	{
 		super(id);
