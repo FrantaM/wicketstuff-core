@@ -28,6 +28,7 @@ import org.apache.wicket.Component;
 import org.apache.wicket.MetaDataKey;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.markup.html.form.AjaxButton;
+import org.apache.wicket.core.util.lang.WicketObjects;
 import org.apache.wicket.event.Broadcast;
 import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxButton;
 import org.apache.wicket.extensions.ajax.markup.html.modal.ModalWindow;
@@ -42,7 +43,6 @@ import org.apache.wicket.markup.html.panel.Fragment;
 import org.apache.wicket.markup.html.panel.GenericPanel;
 import org.apache.wicket.markup.repeater.RepeatingView;
 import org.apache.wicket.model.Model;
-import org.apache.wicket.util.lang.Classes;
 import org.apache.wicket.util.visit.IVisit;
 import org.apache.wicket.util.visit.IVisitor;
 import org.slf4j.Logger;
@@ -76,7 +76,7 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 		final RepeatingView view = new RepeatingView(id);
 		for (final MBeanOperationInfo operation : operations)
 		{
-			final ClassName returnType = this.className(operation.getReturnType());
+			final ClassInfo returnType = this.className(operation.getReturnType());
 			final Component returnTypeLabel = new Label("returnType", returnType.simpleName)
 					.add(AttributeModifier.replace("title", returnType.name));
 
@@ -136,7 +136,7 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 						if (index != null)
 						{
 							assert !parameters.containsKey(index) : "Duplicate parameter index [" + index + "].";
-							parameters.put(index, object.getConvertedInput());
+							parameters.put(index, object.getModelObject());
 						}
 					}
 
@@ -186,26 +186,27 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 		return button;
 	}
 
-	private ClassName className(final String jmxType)
+	private ClassInfo className(final String jmxType)
 	{
-		final ClassName cn = new ClassName();
+		final ClassInfo cn = new ClassInfo();
 		cn.name = jmxType;
 		cn.simpleName = jmxType;
 
-		try
+		/* Why isn't void in AbstractClassResolver? */
+		if (!"void".equals(jmxType))
 		{
-			final Class<?> clazz = Class.forName(jmxType, false, this.getClass().getClassLoader());
-			cn.simpleName = Classes.simpleName(clazz);
-			cn.name = clazz.getName();
-
-			if (clazz.isArray())
+			final Class<?> clazz = WicketObjects.resolveClass(jmxType);
+			if (clazz != null)
 			{
-				cn.name = String.format("%s[]", clazz.getComponentType().getName());
+				cn.simpleName = clazz.getSimpleName();
+				cn.name = clazz.getName();
+				cn.classType = clazz;
+
+				if (clazz.isArray())
+				{
+					cn.name = String.format("%s[]", clazz.getComponentType().getName());
+				}
 			}
-		}
-		catch (final ClassNotFoundException ex)
-		{
-			log.debug("Cannot find class [{}].", jmxType, ex);
 		}
 
 		return cn;
@@ -213,9 +214,12 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 
 	private WebMarkupContainer editorFor(final String id, final MBeanParameterInfo parameter, final Integer index)
 	{
+		final ClassInfo ci = this.className(parameter.getType());
+
 		final TextField<?> input = new RequiredTextField<String>("parameterValue", Model.<String>of());
 		input.setMetaData(PARAMETER_INDEX, index);
-		input.add(AttributeModifier.replace("placeholder", this.className(parameter.getType()).simpleName));
+		input.setType(ci.classType);
+		input.add(AttributeModifier.replace("placeholder", ci.simpleName));
 
 		final Fragment fragment = new Fragment(id, "editor-text", this);
 		fragment.add(input);
@@ -223,8 +227,9 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 		return fragment;
 	}
 
-	private static final class ClassName
+	private static final class ClassInfo
 	{
+		private Class<?> classType;
 		private String simpleName;
 		private String name;
 	}

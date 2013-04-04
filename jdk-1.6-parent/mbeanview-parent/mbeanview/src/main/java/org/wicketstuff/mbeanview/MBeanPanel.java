@@ -20,9 +20,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.management.JMException;
+import javax.management.MBeanException;
 import javax.management.MBeanInfo;
+import javax.management.MBeanOperationInfo;
 import javax.management.ObjectName;
 
+import org.apache.wicket.event.IEvent;
 import org.apache.wicket.extensions.ajax.markup.html.tabs.AjaxTabbedPanel;
 import org.apache.wicket.extensions.markup.html.tabs.AbstractTab;
 import org.apache.wicket.extensions.markup.html.tabs.ITab;
@@ -55,6 +58,42 @@ public class MBeanPanel extends GenericPanel<ObjectName>
 		this.connection = connection;
 		this.setOutputMarkupId(true);
 		this.add(this.newTabbedPanel("tabs"));
+	}
+
+	@Override
+	public void onEvent(final IEvent<?> event)
+	{
+		final Object payload = event.getPayload();
+		if (payload instanceof OperationsPanel.InvokeOperationEvent)
+		{
+			final OperationsPanel.InvokeOperationEvent invokeEvent = (OperationsPanel.InvokeOperationEvent) payload;
+			invokeEvent.setException(null);
+			invokeEvent.setResult(null);
+
+			final MBeanOperationInfo operation = invokeEvent.getOperation();
+			final String[] signature = new String[operation.getSignature().length];
+			for (int i = 0, max = signature.length; i < max; ++i)
+			{
+				signature[i] = operation.getSignature()[i].getType();
+			}
+
+			try
+			{
+				final Object result = this.connection.get().invoke(this.getModelObject(),
+						invokeEvent.getOperation().getName(),
+						invokeEvent.getParameters(), signature);
+
+				invokeEvent.setResult(result);
+			}
+			catch (final MBeanException ex)
+			{
+				invokeEvent.setException(ex.getTargetException());
+			}
+			catch (final Exception ex)
+			{
+				invokeEvent.setException(ex);
+			}
+		}
 	}
 
 	private TabbedPanel<ITab> newTabbedPanel(final String id)
