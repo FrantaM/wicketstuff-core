@@ -151,25 +151,19 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 				final InvokeOperationEvent event = new InvokeOperationEvent(operation, this.collectParameters(form));
 				this.send(this, Broadcast.BUBBLE, event);
 
-				final StringBuilder result = new StringBuilder();
+				final Object result;
 				if (event.getException() != null)
 				{
-					result.append("Problem invoking ");
-					result.append(operation.getName());
-					result.append(": ");
-					result.append(event.getException());
+					operationOutput.setTitle(String.format("Problem invoking %s", operation.getName()));
+					result = event.getException();
 				}
 				else
 				{
-					result.append("Operation invoked successfully.");
-					if (event.getResult() != null)
-					{
-						result.append(" Result: ");
-						result.append(event.getResult());
-					}
+					operationOutput.setTitle("Operation invoked successfully.");
+					result = event.getResult();
 				}
 
-				operationOutput.setContent(new Label(operationOutput.getContentId(), result.toString()));
+				operationOutput.setContent(new ResultPanel(operationOutput.getContentId(), result));
 				operationOutput.show(target);
 			}
 
