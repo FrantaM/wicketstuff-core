@@ -24,10 +24,16 @@
 
 	<developers>
 		<developer>
-			<name>Pedro Henrique Oliveira dos Santos</name>
 			<id>pedrosans</id>
+			<name>Pedro Henrique Oliveira dos Santos</name>
 			<email>pedrosans@gmail.com</email>
 			<timezone>-4</timezone>
+		</developer>
+		<developer>
+			<id>FrantaM</id>
+			<name>Franta Mejta</name>
+			<email>mejta@rewor.cz</email>
+			<timezone>Europe/Prague</timezone>
 		</developer>
 	</developers>
 

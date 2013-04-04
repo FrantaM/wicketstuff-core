@@ -27,6 +27,8 @@ public interface IMBeanServerConnectionProvider extends Serializable
 {
 	/**
 	 * Returns connection to MBean server.
+	 * Must not return {@code null}.
+	 *
 	 * @return Connection to MBean server.
 	 */
 	MBeanServerConnection get();
