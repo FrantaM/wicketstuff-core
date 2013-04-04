@@ -76,9 +76,9 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 		final RepeatingView view = new RepeatingView(id);
 		for (final MBeanOperationInfo operation : operations)
 		{
-			final ClassInfo returnType = this.className(operation.getReturnType());
-			final Component returnTypeLabel = new Label("returnType", returnType.simpleName)
-					.add(AttributeModifier.replace("title", returnType.name));
+			final ClassInfo returnType = ClassInfo.of(operation.getReturnType());
+			final Component returnTypeLabel = new Label("returnType", returnType.getSimpleName())
+					.add(AttributeModifier.replace("title", returnType.getName()));
 
 			final WebMarkupContainer descriptionRow = new WebMarkupContainer("description-row");
 			descriptionRow.setVisibilityAllowed(!operation.getName().equalsIgnoreCase(operation.getDescription()));
@@ -163,7 +163,8 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 					result = event.getResult();
 				}
 
-				operationOutput.setContent(new ResultPanel(operationOutput.getContentId(), result));
+				final ClassInfo ci = ClassInfo.of(operation.getReturnType());
+				operationOutput.setContent(new ResultPanel(operationOutput.getContentId(), result, ci.getClassType()));
 				operationOutput.show(target);
 			}
 
@@ -180,52 +181,19 @@ public class OperationsPanel extends GenericPanel<ObjectName>
 		return button;
 	}
 
-	private ClassInfo className(final String jmxType)
-	{
-		final ClassInfo cn = new ClassInfo();
-		cn.name = jmxType;
-		cn.simpleName = jmxType;
-
-		/* Why isn't void in AbstractClassResolver? */
-		if (!"void".equals(jmxType))
-		{
-			final Class<?> clazz = WicketObjects.resolveClass(jmxType);
-			if (clazz != null)
-			{
-				cn.simpleName = clazz.getSimpleName();
-				cn.name = clazz.getName();
-				cn.classType = clazz;
-
-				if (clazz.isArray())
-				{
-					cn.name = String.format("%s[]", clazz.getComponentType().getName());
-				}
-			}
-		}
-
-		return cn;
-	}
-
 	private WebMarkupContainer editorFor(final String id, final MBeanParameterInfo parameter, final Integer index)
 	{
-		final ClassInfo ci = this.className(parameter.getType());
+		final ClassInfo ci = ClassInfo.of(parameter.getType());
 
 		final TextField<?> input = new RequiredTextField<String>("parameterValue", Model.<String>of());
 		input.setMetaData(PARAMETER_INDEX, index);
-		input.setType(ci.classType);
-		input.add(AttributeModifier.replace("placeholder", ci.simpleName));
+		input.setType(ci.getClassType());
+		input.add(AttributeModifier.replace("placeholder", ci.getSimpleName()));
 
 		final Fragment fragment = new Fragment(id, "editor-text", this);
 		fragment.add(input);
 
 		return fragment;
-	}
-
-	private static final class ClassInfo
-	{
-		private Class<?> classType;
-		private String simpleName;
-		private String name;
 	}
 
 	public static final class InvokeOperationEvent extends EventSupport

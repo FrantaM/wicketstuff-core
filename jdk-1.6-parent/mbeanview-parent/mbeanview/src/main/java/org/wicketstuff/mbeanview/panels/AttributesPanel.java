@@ -60,7 +60,8 @@ public class AttributesPanel extends GenericPanel<ObjectName>
 			this.send(this, Broadcast.BUBBLE, event);
 
 			final Object result = event.getException() != null ? event.getException() : event.getResult();
-			row.add(new ResultPanel("value", result, true, attribute.isWritable()));
+			final ClassInfo ci = ClassInfo.of(attribute.getType());
+			row.add(new ResultPanel("value", result, ci.getClassType(), true, attribute.isWritable()));
 
 			view.add(row);
 		}
