@@ -15,10 +15,15 @@
  */
 package org.wicketstuff.mbeanview.panels;
 
+
+import javax.management.MBeanAttributeInfo;
 import javax.management.ObjectName;
 
+import org.apache.wicket.event.Broadcast;
+import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.panel.GenericPanel;
-import org.wicketstuff.mbeanview.IMBeanServerConnectionProvider;
+import org.apache.wicket.markup.repeater.RepeatingView;
 
 /**
  *
@@ -28,10 +33,55 @@ import org.wicketstuff.mbeanview.IMBeanServerConnectionProvider;
 public class AttributesPanel extends GenericPanel<ObjectName>
 {
 	private static final long serialVersionUID = 20130403;
+	private final MBeanAttributeInfo[] attributes;
 
-	public AttributesPanel(final String id, final IMBeanServerConnectionProvider connection, final ObjectName objectName)
+	public AttributesPanel(final String id, final MBeanAttributeInfo[] attributes)
 	{
 		super(id);
+		this.attributes = attributes;
+	}
+
+	@Override
+	protected void onInitialize()
+	{
+		super.onInitialize();
+		this.add(this.newAttributesList("attribute", attributes));
+	}
+
+	private WebMarkupContainer newAttributesList(final String id, final MBeanAttributeInfo[] attributes)
+	{
+		final RepeatingView view = new RepeatingView(id);
+		for (final MBeanAttributeInfo attribute : attributes)
+		{
+			final WebMarkupContainer row = new WebMarkupContainer(view.newChildId());
+			row.add(new Label("name", attribute.getName()));
+
+			final GetAttributeEvent event = new GetAttributeEvent(attribute);
+			this.send(this, Broadcast.BUBBLE, event);
+
+			final Object result = event.getException() != null ? event.getException() : event.getResult();
+			row.add(new ResultPanel("value", result, true, attribute.isWritable()));
+
+			view.add(row);
+		}
+
+		return view;
+	}
+
+	public static final class GetAttributeEvent extends EventSupport
+	{
+		private static final long serialVersionUID = 20130404;
+		private final MBeanAttributeInfo attribute;
+
+		public GetAttributeEvent(final MBeanAttributeInfo attribute)
+		{
+			this.attribute = attribute;
+		}
+
+		public MBeanAttributeInfo getAttribute()
+		{
+			return attribute;
+		}
 
 	}
 

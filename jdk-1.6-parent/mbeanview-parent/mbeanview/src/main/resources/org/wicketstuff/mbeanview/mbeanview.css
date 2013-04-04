@@ -48,6 +48,15 @@
 .mbeanview .view .tab-panel {
 	padding: .5em;
 }
+.mbeanview .view .tab-panel .attributes {
+	border-collapse: collapse;
+}
+.mbeanview .view .tab-panel .attributes tr:nth-child(2n) {
+	background-color: whitesmoke;
+}
+.mbeanview .view .tab-panel .attributes td {
+	padding: .4em;
+}
 .mbeanview .view .tab-panel .operations pre {
 	display: inline-block;
 	margin: 0;

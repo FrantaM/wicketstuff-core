@@ -20,7 +20,11 @@ import java.io.StringWriter;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.TabularData;
+
 import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.basic.MultiLineLabel;
 import org.apache.wicket.markup.html.panel.Fragment;
 import org.apache.wicket.markup.html.panel.Panel;
@@ -34,10 +38,18 @@ final class ResultPanel extends Panel
 {
 	private static final long serialVersionUID = 20130404;
 	private static final String CONTAINER_ID = "result-placeholder";
+	private final boolean outline;
 
 	public ResultPanel(final String id, final Object result)
 	{
+		this(id, result, false, false);
+	}
+
+	public ResultPanel(final String id, final Object result, final boolean outline, final boolean editable)
+	{
 		super(id);
+
+		this.outline = outline;
 		this.add(this.resultContainer(result));
 	}
 
@@ -54,8 +66,21 @@ final class ResultPanel extends Panel
 
 			return this.resultContainerText(sw.getBuffer());
 		}
+		if (result instanceof CompositeData)
+		{
+			return this.resultContainerText("<composite data>");
+		}
+		if (result instanceof TabularData)
+		{
+			return this.resultContainerText("<tabular data>");
+		}
 		if (result.getClass().isArray())
 		{
+			if (CompositeData.class.isAssignableFrom(result.getClass().getComponentType()))
+			{
+				return this.resultContainerText("<composite data array>");
+			}
+
 			final Object[] array = new Object[Array.getLength(result)];
 			for (int i = 0; i < array.length; ++i)
 			{
@@ -71,7 +96,22 @@ final class ResultPanel extends Panel
 	private WebMarkupContainer resultContainerText(final Object result)
 	{
 		final Fragment f = new Fragment(CONTAINER_ID, "result-text", this);
-		f.add(new MultiLineLabel("result", String.valueOf(result)));
+
+		final String value = String.valueOf(result);
+		if (this.outline)
+		{
+			int lineEnd = value.indexOf('\n');
+			if (lineEnd < 0)
+			{
+				lineEnd = value.indexOf('\r');
+			}
+
+			f.add(new Label("result", lineEnd < 0 ? value : value.substring(0, lineEnd)));
+		}
+		else
+		{
+			f.add(new MultiLineLabel("result", value));
+		}
 
 		return f;
 	}

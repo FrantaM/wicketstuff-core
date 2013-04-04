@@ -18,12 +18,14 @@ package org.wicketstuff.mbeanview;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import javax.management.JMException;
 import javax.management.MBeanException;
 import javax.management.MBeanInfo;
 import javax.management.MBeanOperationInfo;
 import javax.management.ObjectName;
+import javax.management.RuntimeMBeanException;
 
 import org.apache.wicket.event.IEvent;
 import org.apache.wicket.extensions.ajax.markup.html.tabs.AjaxTabbedPanel;
@@ -38,6 +40,7 @@ import org.apache.wicket.model.Model;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wicketstuff.mbeanview.panels.AttributesPanel;
+import org.wicketstuff.mbeanview.panels.EventSupport;
 import org.wicketstuff.mbeanview.panels.OperationsPanel;
 
 /**
@@ -63,35 +66,91 @@ public class MBeanPanel extends GenericPanel<ObjectName>
 	@Override
 	public void onEvent(final IEvent<?> event)
 	{
-		final Object payload = event.getPayload();
-		if (payload instanceof OperationsPanel.InvokeOperationEvent)
+		final Object eventPayload = event.getPayload();
+		if (eventPayload instanceof OperationsPanel.InvokeOperationEvent)
 		{
-			final OperationsPanel.InvokeOperationEvent invokeEvent = (OperationsPanel.InvokeOperationEvent) payload;
-			invokeEvent.setException(null);
-			invokeEvent.setResult(null);
-
-			final MBeanOperationInfo operation = invokeEvent.getOperation();
+			final OperationsPanel.InvokeOperationEvent payload = (OperationsPanel.InvokeOperationEvent) eventPayload;
+			final MBeanOperationInfo operation = payload.getOperation();
 			final String[] signature = new String[operation.getSignature().length];
 			for (int i = 0, max = signature.length; i < max; ++i)
 			{
 				signature[i] = operation.getSignature()[i].getType();
 			}
 
-			try
+			this.onEventCall(payload, new Callable<Object>()
 			{
-				final Object result = this.connection.get().invoke(this.getModelObject(),
-						invokeEvent.getOperation().getName(),
-						invokeEvent.getParameters(), signature);
+				@Override
+				public Object call() throws Exception
+				{
+					return connection.get().invoke(getModelObject(),
+							payload.getOperation().getName(),
+							payload.getParameters(), signature);
+				}
 
-				invokeEvent.setResult(result);
-			}
-			catch (final MBeanException ex)
+			});
+		}
+		else if (eventPayload instanceof AttributesPanel.GetAttributeEvent)
+		{
+			final AttributesPanel.GetAttributeEvent payload = (AttributesPanel.GetAttributeEvent) eventPayload;
+			this.onEventCall(payload, new Callable<Object>()
 			{
-				invokeEvent.setException(ex.getTargetException());
-			}
-			catch (final Exception ex)
+				@Override
+				public Object call() throws Exception
+				{
+					return connection.get().getAttribute(getModelObject(), payload.getAttribute().getName());
+				}
+
+			});
+		}
+	}
+
+	private void onEventCall(final EventSupport payload, final Callable<?> call)
+	{
+		payload.setException(null);
+		payload.setResult(null);
+
+		try
+		{
+			payload.setResult(call.call());
+		}
+		catch (final RuntimeMBeanException ex)
+		{
+			payload.setException(ex.getTargetException());
+		}
+		catch (final MBeanException ex)
+		{
+			payload.setException(ex.getTargetException());
+		}
+		catch (final Exception ex)
+		{
+			payload.setException(ex);
+		}
+
+		if (payload.getException() != null)
+		{
+			final Throwable payloadException = payload.getException();
+			final StackTraceElement[] stack = (new Throwable()).getStackTrace();
+			final StackTraceElement[] payloadStack = payloadException.getStackTrace();
+			if (stack.length > 0 && payloadStack.length > 0)
 			{
-				invokeEvent.setException(ex);
+				/* First common parent is caller of this method. */
+				final StackTraceElement thisCall = stack[1];
+				/* Stack contains two additional frames:
+				 *  - call to call.call() (above in try)
+				 *  - call to MBeanServerConnection in provided call */
+				final int removeStack = 2;
+
+				for (int i = removeStack; i < payloadStack.length; ++i)
+				{
+					if (payloadStack[i].equals(thisCall))
+					{
+						final int size = i - removeStack;
+						final StackTraceElement[] uniqueStack = new StackTraceElement[size];
+						System.arraycopy(payloadStack, 0, uniqueStack, 0, size);
+						payloadException.setStackTrace(uniqueStack);
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -112,7 +171,7 @@ public class MBeanPanel extends GenericPanel<ObjectName>
 			@Override
 			public WebMarkupContainer getPanel(final String panelId, final MBeanInfo mbeanInfo)
 			{
-				return new AttributesPanel(panelId, connection, getModelObject());
+				return new AttributesPanel(panelId, mbeanInfo.getAttributes());
 			}
 
 		});
