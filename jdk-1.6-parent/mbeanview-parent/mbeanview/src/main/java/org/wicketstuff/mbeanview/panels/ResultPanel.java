@@ -15,27 +15,24 @@
  */
 package org.wicketstuff.mbeanview.panels;
 
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.io.StringWriter;
 import java.lang.reflect.Array;
-import java.util.Arrays;
 
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.TabularData;
 
 import org.apache.wicket.AttributeModifier;
+import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.markup.html.AjaxLink;
 import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.extensions.ajax.markup.html.modal.ModalWindow;
 import org.apache.wicket.markup.ComponentTag;
-import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
-import org.apache.wicket.markup.html.basic.MultiLineLabel;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.TextField;
-import org.apache.wicket.markup.html.panel.EmptyPanel;
+import org.apache.wicket.markup.html.list.Loop;
+import org.apache.wicket.markup.html.list.LoopItem;
 import org.apache.wicket.markup.html.panel.Fragment;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
@@ -52,6 +49,8 @@ final class ResultPanel extends Panel
 	private static final String CONTAINER_ID = "result-placeholder";
 	private static final int OUTLINE_LENGTH = 75;
 	private final ModalWindow detailWindow;
+	private final Object result;
+	private final Class<?> resultType;
 	private final boolean outline;
 	private final boolean editable;
 
@@ -64,6 +63,8 @@ final class ResultPanel extends Panel
 	{
 		super(id);
 
+		this.result = result;
+		this.resultType = resultType;
 		this.outline = outline;
 		this.editable = editable;
 
@@ -71,52 +72,14 @@ final class ResultPanel extends Panel
 		this.add(this.resultContainer(result, resultType));
 	}
 
-	private WebMarkupContainer resultContainer(final Object result, final Class<?> resultType)
+	private Component resultContainer(final Object result, final Class<?> resultType)
 	{
-		if (this.outline)
-		{
-			return this.resultContainerOutline(result, resultType);
-		}
-
-		if (result == null)
-		{
-			return this.resultContainerText("null");
-		}
-		if (result instanceof Throwable)
-		{
-			final StringWriter sw = new StringWriter();
-			((Throwable) result).printStackTrace(new PrintWriter(sw));
-
-			return this.resultContainerText(sw.getBuffer());
-		}
-		if (result instanceof CompositeData)
-		{
-			return this.resultContainerText("<composite data>");
-		}
-		if (result instanceof TabularData)
-		{
-			return this.resultContainerText("<tabular data>");
-		}
-		if (result.getClass().isArray())
-		{
-			if (CompositeData.class.isAssignableFrom(result.getClass().getComponentType()))
-			{
-				return this.resultContainerText("<composite data array>");
-			}
-
-			final Object[] array = new Object[Array.getLength(result)];
-			for (int i = 0; i < array.length; ++i)
-			{
-				array[i] = Array.get(result, i);
-			}
-
-			return this.resultContainerText(Arrays.deepToString(array));
-		}
-
-		return this.resultContainerText(result);
+		return this.outline
+				? this.resultContainerOutline(result, resultType)
+				: this.resultContainerDialog(result, resultType);
 	}
 
-	private WebMarkupContainer resultContainerOutline(final Object result, final Class<?> resultType)
+	private Component resultContainerOutline(final Object result, final Class<?> resultType)
 	{
 		final Fragment f = new Fragment(CONTAINER_ID, "result-text", this);
 
@@ -134,16 +97,16 @@ final class ResultPanel extends Panel
 		}
 		else if (result instanceof CompositeData || result instanceof TabularData)
 		{
-			f.add(new OutlineLink("result", result, result.getClass().getName()));
+			f.add(new OutlineLink("result", result.getClass().getName()));
 		}
 		else if (result instanceof Throwable)
 		{
-			f.add(new OutlineLink("result", result, ((Throwable) result).getLocalizedMessage()));
+			f.add(new OutlineLink("result", ((Throwable) result).getLocalizedMessage()));
 		}
 		else if (result.getClass().isArray())
 		{
 			final String label = String.format(this.getLocale(), "%s items", Array.getLength(result)); // l10n
-			f.add(new OutlineLink("result", result, label));
+			f.add(new OutlineLink("result", label));
 		}
 		else
 		{
@@ -153,7 +116,7 @@ final class ResultPanel extends Panel
 			if (length < label.length())
 			{
 				final String linkLabel = String.format("%s&hellip;", label.substring(0, length));
-				f.add(new OutlineLink("result", result, linkLabel));
+				f.add(new OutlineLink("result", linkLabel));
 			}
 			else if (this.editable && result instanceof Serializable)
 			{
@@ -168,54 +131,44 @@ final class ResultPanel extends Panel
 		return f;
 	}
 
-	private WebMarkupContainer resultContainerText(final Object result)
+	private Component resultContainerDialog(final Object result, final Class<?> resultType)
 	{
-		final Fragment f = new Fragment(CONTAINER_ID, "result-text", this);
-
-		final String value = String.valueOf(result);
-		if (this.outline)
+		if (result == null)
 		{
-			int lineEnd = value.indexOf('\n');
-			if (lineEnd < 0)
+			return new Label(CONTAINER_ID, "null");
+		}
+		else if (result.getClass().isArray())
+		{
+			final Object[] array = new Object[Array.getLength(result)];
+			for (int i = 0; i < array.length; ++i)
 			{
-				lineEnd = value.indexOf('\r');
-				if (lineEnd < 0)
-				{
-					lineEnd = value.length();
-				}
+				array[i] = Array.get(result, i);
 			}
-			lineEnd = Math.min(lineEnd, OUTLINE_LENGTH);
 
-			final boolean displayDetail = lineEnd < value.length();
-
-			f.add(new Label("result", value.substring(0, lineEnd)));
-			f.add(new AjaxLink<Void>("display-detail")
+			if (array.length > 0)
 			{
-				private static final long serialVersionUID = 1L;
-
-				@Override
-				public void onClick(final AjaxRequestTarget target)
+				final Fragment f = new Fragment(CONTAINER_ID, "result-list", this);
+				f.add(new Loop("list", array.length)
 				{
-					detailWindow.setContent(new MultiLineLabel(detailWindow.getContentId(), value));
-					detailWindow.setVisibilityAllowed(true);
-					detailWindow.show(target);
-				}
+					private static final long serialVersionUID = 1L;
 
-				@Override
-				public boolean isVisible()
-				{
-					return displayDetail;
-				}
+					@Override
+					protected void populateItem(final LoopItem item)
+					{
+						item.add(new Label("result", String.valueOf(array[item.getIndex()])));
+					}
 
-			});
-		}
-		else
-		{
-			f.add(new MultiLineLabel("result", value));
-			f.add(new EmptyPanel("display-detail"));
+				});
+
+				return f;
+			}
+			else
+			{
+				return new Label(CONTAINER_ID, "<empty array>"); // l10n
+			}
 		}
 
-		return f;
+		return new Label(CONTAINER_ID, String.valueOf(result));
 	}
 
 	private final class OutlineTextField extends Fragment
@@ -256,13 +209,11 @@ final class ResultPanel extends Panel
 	private final class OutlineLink extends AjaxLink<Void>
 	{
 		private static final long serialVersionUID = 20130404;
-		private final Object result;
 
-		public OutlineLink(final String id, final Object result, final String label)
+		public OutlineLink(final String id, final String label)
 		{
 			super(id);
 
-			this.result = result;
 			this.setBody(Model.of(label));
 			this.setEscapeModelStrings(false);
 		}
@@ -270,7 +221,9 @@ final class ResultPanel extends Panel
 		@Override
 		public void onClick(final AjaxRequestTarget target)
 		{
-			throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+			final ResultPanel rp = new ResultPanel(detailWindow.getContentId(), result, resultType, false, editable);
+			detailWindow.setContent(rp);
+			detailWindow.show(target);
 		}
 
 		@Override
