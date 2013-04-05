@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import javax.management.Attribute;
 import javax.management.JMException;
 import javax.management.MBeanException;
 import javax.management.MBeanInfo;
@@ -107,6 +108,21 @@ public class MBeanPanel extends GenericPanel<ObjectName>
 				public Object call() throws Exception
 				{
 					return connection.get().getAttribute(getModelObject(), payload.getAttribute().getName());
+				}
+
+			});
+		}
+		else if (eventPayload instanceof AttributesPanel.SetAttributeEvent)
+		{
+			final AttributesPanel.SetAttributeEvent payload = (AttributesPanel.SetAttributeEvent) eventPayload;
+			this.onEventCall(payload, new Callable<Object>()
+			{
+				@Override
+				public Object call() throws Exception
+				{
+					final Attribute attr = new Attribute(payload.getAttribute().getName(), payload.getValue());
+					connection.get().setAttribute(getModelObject(), attr);
+					return Boolean.TRUE;
 				}
 
 			});
