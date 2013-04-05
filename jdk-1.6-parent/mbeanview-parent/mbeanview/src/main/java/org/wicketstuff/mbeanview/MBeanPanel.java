@@ -27,12 +27,21 @@ import javax.management.MBeanOperationInfo;
 import javax.management.ObjectName;
 import javax.management.RuntimeMBeanException;
 
+import org.apache.wicket.Component;
+import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.markup.html.AjaxFallbackLink;
+import org.apache.wicket.behavior.Behavior;
 import org.apache.wicket.event.IEvent;
 import org.apache.wicket.extensions.ajax.markup.html.tabs.AjaxTabbedPanel;
 import org.apache.wicket.extensions.markup.html.tabs.AbstractTab;
 import org.apache.wicket.extensions.markup.html.tabs.ITab;
 import org.apache.wicket.extensions.markup.html.tabs.TabbedPanel;
+import org.apache.wicket.markup.ComponentTag;
+import org.apache.wicket.markup.MarkupElement;
+import org.apache.wicket.markup.MarkupStream;
+import org.apache.wicket.markup.RawMarkup;
 import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.list.LoopItem;
 import org.apache.wicket.markup.html.panel.EmptyPanel;
 import org.apache.wicket.markup.html.panel.GenericPanel;
 import org.apache.wicket.model.IModel;
@@ -193,18 +202,7 @@ public class MBeanPanel extends GenericPanel<ObjectName>
 
 		});
 
-		return new AjaxTabbedPanel<ITab>(id, tabs)
-		{
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			protected WebMarkupContainer newLink(final String linkId, final int index)
-			{
-				return (WebMarkupContainer) super.newLink(linkId, index)
-						.setEnabled(((MBeanInfoTab) this.getTabs().get(index)).isEnabled());
-			}
-
-		};
+		return new AjaxTabbedPanelImpl(id, tabs);
 	}
 
 	private abstract class MBeanInfoTab extends AbstractTab
@@ -266,6 +264,137 @@ public class MBeanPanel extends GenericPanel<ObjectName>
 		protected abstract boolean isEnabled(final MBeanInfo mbeanInfo);
 
 		protected abstract WebMarkupContainer getPanel(final String panelId, final MBeanInfo mbeanInfo);
+
+	}
+
+	private static final class AjaxTabbedPanelImpl extends AjaxTabbedPanel<ITab>
+	{
+		private static final long serialVersionUID = 1L;
+
+		public AjaxTabbedPanelImpl(final String id, final List<ITab> tabs)
+		{
+			super(id, tabs);
+		}
+
+		private MBeanInfoTab getTab(final int index)
+		{
+			return ((MBeanInfoTab) this.getTabs().get(index));
+		}
+
+		@Override
+		protected WebMarkupContainer newLink(final String linkId, final int index)
+		{
+			return new AjaxFallbackLink<Void>(linkId)
+			{
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				public void onClick(final AjaxRequestTarget target)
+				{
+					setSelectedTab(index);
+					if (target != null)
+					{
+						target.add(AjaxTabbedPanelImpl.this);
+					}
+					onAjaxUpdate(target);
+				}
+
+				@Override
+				public boolean isEnabled()
+				{
+					return getTab(index).isEnabled();
+				}
+
+				@Override
+				protected void disableLink(final ComponentTag tag)
+				{
+					super.disableLink(tag);
+					tag.setName("a");
+				}
+
+				@Override
+				public String getBeforeDisabledLink()
+				{
+					return null;
+				}
+
+				@Override
+				public String getAfterDisabledLink()
+				{
+					return null;
+				}
+
+			};
+
+		}
+
+		@Override
+		protected WebMarkupContainer newTabsContainer(final String id)
+		{
+			return new WebMarkupContainer(id)
+			{
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				protected void onComponentTag(final ComponentTag tag)
+				{
+					super.onComponentTag(tag);
+					tag.put("class", getTabContainerCssClass());
+				}
+
+				@Override
+				protected boolean renderNext(final MarkupStream markupStream)
+				{
+					final MarkupElement me = markupStream.get();
+
+					/* MarkupFilter in action :-D */
+					if (me instanceof RawMarkup)
+					{
+						final String markup = ((RawMarkup) me).toString();
+						if (markup.trim().equalsIgnoreCase("<ul>"))
+						{
+							this.getResponse().write("<ul class='nav nav-tabs'>");
+							return true;
+						}
+					}
+
+					return super.renderNext(markupStream);
+				}
+
+			};
+		}
+
+		@Override
+		protected LoopItem newTabContainer(final int tabIndex)
+		{
+			return (LoopItem) super.newTabContainer(tabIndex).add(new Behavior()
+			{
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				public void onComponentTag(final Component component, final ComponentTag tag)
+				{
+					String classValue = tag.getAttribute("class");
+					if (!getTab(tabIndex).isEnabled())
+					{
+						classValue += " disabled";
+					}
+					else
+					{
+						classValue = classValue.replace("disabled", "");
+					}
+
+					tag.put("class", classValue);
+				}
+
+			});
+		}
+
+		@Override
+		protected String getSelectedTabCssClass()
+		{
+			return "active";
+		}
 
 	}
 

@@ -27,11 +27,13 @@ import javax.management.openmbean.TabularData;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.markup.html.AjaxLink;
+import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.extensions.ajax.markup.html.modal.ModalWindow;
 import org.apache.wicket.markup.ComponentTag;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.basic.MultiLineLabel;
+import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.panel.EmptyPanel;
 import org.apache.wicket.markup.html.panel.Fragment;
@@ -48,7 +50,7 @@ final class ResultPanel extends Panel
 {
 	private static final long serialVersionUID = 20130404;
 	private static final String CONTAINER_ID = "result-placeholder";
-	private static final int OUTLINE_LENGTH = 120;
+	private static final int OUTLINE_LENGTH = 75;
 	private final ModalWindow detailWindow;
 	private final boolean outline;
 	private final boolean editable;
@@ -122,7 +124,7 @@ final class ResultPanel extends Panel
 		{
 			if (this.editable)
 			{
-				f.add(new OutlineTextField<Serializable>("result", Model.of(), resultType)
+				f.add(new OutlineTextField("result", Model.of(), resultType)
 						.add(AttributeModifier.replace("placeholder", "null")));
 			}
 			else
@@ -155,7 +157,7 @@ final class ResultPanel extends Panel
 			}
 			else if (this.editable && result instanceof Serializable)
 			{
-				f.add(new OutlineTextField<Serializable>("result", Model.of((Serializable) result), resultType));
+				f.add(new OutlineTextField("result", Model.of((Serializable) result), resultType));
 			}
 			else
 			{
@@ -216,21 +218,37 @@ final class ResultPanel extends Panel
 		return f;
 	}
 
-	private final class OutlineTextField<T> extends TextField<T>
+	private final class OutlineTextField extends Fragment
 	{
 		private static final long serialVersionUID = 20130404;
 
-		@SuppressWarnings("unchecked")
-		public OutlineTextField(String id, IModel<T> model, Class<?> type)
+		public OutlineTextField(final String id, IModel<Serializable> model, Class<?> type)
 		{
-			super(id, model, (Class<T>) type);
-		}
+			super(id, "result-box", ResultPanel.this);
 
-		@Override
-		protected void onComponentTag(final ComponentTag tag)
-		{
-			tag.setName("input");
-			super.onComponentTag(tag);
+			final Form<?> form = new Form<Serializable>("form", model);
+			this.add(form);
+
+			@SuppressWarnings("unchecked")
+			final Class<Serializable> serializable = (Class<Serializable>) type;
+			form.add(new TextField<Serializable>("result", model, serializable));
+			form.add(new AjaxButton("save")
+			{
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				protected void onSubmit(final AjaxRequestTarget target, final Form<?> form)
+				{
+					super.onSubmit(target, form);
+				}
+
+				@Override
+				protected void onError(final AjaxRequestTarget target, final Form<?> form)
+				{
+					super.onError(target, form);
+				}
+
+			});
 		}
 
 	}

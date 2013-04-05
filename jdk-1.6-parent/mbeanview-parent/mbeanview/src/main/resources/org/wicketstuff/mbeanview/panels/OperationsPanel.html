@@ -4,22 +4,24 @@
 		<wicket:panel>
 			<div wicket:id="output"></div>
 
-			<table class="operations">
+			<table class="operations table table-condensed table-striped">
 				<wicket:container wicket:id="operation">
 					<tr>
 						<td>
-							<pre wicket:id="returnType">[int]</pre>
+							<code wicket:id="returnType">[int]</code>
 						</td>
 						<td>
-							<form wicket:id="methodCall">
-								<button wicket:id="method"><pre wicket:id="methodName">[setSomeValue]</pre></button>
-								<pre>(</pre>
+							<form wicket:id="methodCall" class="form-inline">
+								<button wicket:id="method" class="btn">
+									<wicket:container wicket:id="methodName">[setSomeValue]</wicket:container>
+								</button>
+								<code>(</code>
 								<wicket:container wicket:id="parameter">
-									<pre wicket:id="separator">, </pre>
-									<pre wicket:id="parameterName">[arg0]</pre>
+									<code wicket:id="separator">, </code>
+									<code wicket:id="parameterName">[arg0]</code>
 									<wicket:container wicket:id="parameterEditor"><input type="text" /></wicket:container>
 								</wicket:container>
-								<pre>)</pre>
+								<code>)</code>
 							</form>
 						</td>
 					</tr>
@@ -31,7 +33,7 @@
 			</table>
 
 			<wicket:fragment wicket:id="editor-text">
-				<input wicket:id="parameterValue" type="text" />
+				<input wicket:id="parameterValue" type="text" class="span1" />
 			</wicket:fragment>
 		</wicket:panel>
 	</body>
